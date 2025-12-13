@@ -87,7 +87,12 @@ sudo evtest /dev/input/event6   # verify events
 
 Autostart (user systemd, hidden)
 ```bash
-cat > ~/.config/systemd/user/hotkeys.service <<'EOF'
+#!/usr/bin/env bash
+set -e
+
+mkdir -p "$HOME/.config/systemd/user"
+
+cat > "$HOME/.config/systemd/user/hotkeys.service" <<'EOF'
 [Unit]
 Description=Hotkeys macro daemon
 After=graphical-session.target
@@ -106,6 +111,14 @@ EOF
 
 systemctl --user daemon-reload
 systemctl --user enable --now hotkeys.service
+```
+Or run the bundled helper (one-time; persists across reboots once enabled):
+```bash
+bash /mnt/files/Workspaces/workspace-py/Hotkeys/autostart.sh
+# optional: for boot without active login
+loginctl enable-linger marijn
+# To stop/disable later
+systemctl --user disable --now hotkeys.service
 ```
 
 
