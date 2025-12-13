@@ -1,0 +1,24 @@
+name: Example Game
+match:
+  wm_class_contains:
+    - steam_app
+  title_contains:
+    - Example Game
+macros:
+  - name: rapid_fire
+    trigger:
+      key: f8
+      behavior: toggle_loop  # once | toggle_loop | hold_loop
+    actions:
+      - type: tap_mouse
+        button: left
+      - type: delay
+        ms: 120
+  - name: dodge
+    trigger:
+      key: space
+      behavior: once
+    actions:
+      - type: tap_key
+        key: shift
+

@@ -1,0 +1,14 @@
+name: Darktide
+match:
+  wm_class_contains:
+    - "steam_app_1361210"
+  title_contains:
+    - "Warhammer 40,000: Darktide"
+macros:
+  - name: auto_click
+    trigger: { key: button13, behavior: toggle_loop }
+    actions:
+      - { type: mouse_down, button: left }
+      - { type: delay, ms: 25 }   # hold duration
+      - { type: mouse_up, button: left }
+      - { type: delay, ms: 25 }   # gap before next press

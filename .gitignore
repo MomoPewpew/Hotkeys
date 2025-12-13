@@ -1,0 +1,16 @@
+# Python venv and bytecode
+.venv/
+__pycache__/
+*.pyc
+
+# Editor/OS
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Local configs
+configs/*.local.yml
+
