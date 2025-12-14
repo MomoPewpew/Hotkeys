@@ -11,7 +11,8 @@ After=graphical-session.target
 [Service]
 Type=simple
 WorkingDirectory=/mnt/files/Workspaces/workspace-py/Hotkeys
-ExecStart=/mnt/files/Workspaces/workspace-py/Hotkeys/.venv/bin/python -m hotkeys.main --config-dir configs --evdev-devices /dev/input/event6,/dev/input/event7
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/env PYTHONUNBUFFERED=1 /mnt/files/Workspaces/workspace-py/Hotkeys/.venv/bin/python -m hotkeys.main --config-dir configs --evdev-devices /dev/input/event6,/dev/input/event7
 Restart=on-failure
 StandardOutput=journal
 StandardError=journal

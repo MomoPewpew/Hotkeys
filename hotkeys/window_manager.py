@@ -22,9 +22,12 @@ def _run(cmd: list[str]) -> str:
 
 def _parse_xprop_value(output: str, key: str) -> Optional[str]:
     for line in output.splitlines():
-        if line.startswith(key):
-            _, value = line.split("=", 1)
-            return value.strip().strip('"')
+        if not line.startswith(key):
+            continue
+        if "=" not in line:
+            continue
+        _, value = line.split("=", 1)
+        return value.strip().strip('"')
     return None
 
 
