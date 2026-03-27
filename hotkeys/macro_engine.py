@@ -61,6 +61,8 @@ class MacroEngine:
         self._active_profile: Optional[Profile] = None
         # map loop key -> (stop_event, expected_profile)
         self._running_loops: Dict[str, tuple[threading.Event, Profile]] = {}
+        # cycle state per profile+macro
+        self._cycle_state: Dict[str, int] = {}
         self._lock = threading.Lock()
         self.keyboard_controller = keyboard.Controller()
         self.mouse_controller = mouse.Controller()
@@ -73,6 +75,7 @@ class MacroEngine:
         """Replace loaded profiles (used by live config reload)."""
         with self._lock:
             self._profiles = list(profiles)
+            self._cycle_state.clear()
 
     def update_active_window(self, window: Optional[WindowInfo]) -> None:
         if not window:
@@ -112,6 +115,8 @@ class MacroEngine:
                         self._start_loop_if_needed(macro, profile)
                     else:
                         self._stop_loop(macro, profile)
+                elif macro.trigger.behavior == "cycle" and pressed:
+                    self._run_cycle(macro, profile)
 
     def handle_mouse_button(self, button_name: str, pressed: bool) -> None:
         """
@@ -131,6 +136,8 @@ class MacroEngine:
                         self._start_loop_if_needed(macro, profile)
                     else:
                         self._stop_loop(macro, profile)
+                elif macro.trigger.behavior == "cycle" and pressed:
+                    self._run_cycle(macro, profile)
 
     def handle_scroll(self, dx: int, dy: int) -> None:
         """
@@ -183,6 +190,8 @@ class MacroEngine:
                         self._start_loop_if_needed(macro, profile)
                     else:
                         self._stop_loop(macro, profile)
+                elif macro.trigger.behavior == "cycle" and pressed:
+                    self._run_cycle(macro, profile)
 
     def _loop_key(self, profile: Profile, macro: MacroDefinition) -> str:
         return f"{id(profile)}:{macro.name}"
@@ -226,11 +235,25 @@ class MacroEngine:
     def _is_profile_active(self, expected: Profile) -> bool:
         return self._active_profile is expected
 
+    def _run_cycle(self, macro: MacroDefinition, profile: Profile) -> None:
+        if not macro.actions_cycle:
+            return
+        key = self._loop_key(profile, macro)
+        with self._lock:
+            idx = self._cycle_state.get(key, 0)
+            next_idx = (idx + 1) % len(macro.actions_cycle)
+            self._cycle_state[key] = next_idx
+        actions = macro.actions_cycle[idx]
+        self._run_action_list(macro, profile, actions)
+
     def _run_actions(self, macro: MacroDefinition, expected_profile: Profile) -> None:
+        self._run_action_list(macro, expected_profile, macro.actions)
+
+    def _run_action_list(self, macro: MacroDefinition, expected_profile: Profile, actions: list[MacroAction]) -> None:
         if not self._is_profile_active(expected_profile):
             return
         print(f"[macro] run: {macro.name}")
-        for action in macro.actions:
+        for action in actions:
             if not self._is_profile_active(expected_profile):
                 return
             if action.type == "delay":

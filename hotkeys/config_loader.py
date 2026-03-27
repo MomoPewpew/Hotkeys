@@ -26,6 +26,7 @@ class MacroDefinition:
     name: str
     trigger: MacroTrigger
     actions: List[MacroAction]
+    actions_cycle: Optional[List[List[MacroAction]]] = None
 
 
 @dataclass
@@ -80,16 +81,39 @@ def _parse_macro(raw: Dict[str, Any]) -> MacroDefinition:
     behavior = trigger_raw.get("behavior", "once")
     if not trigger_key:
         raise ValueError(f"Macro '{name}' missing trigger.key")
-    if behavior not in {"once", "toggle_loop", "hold_loop"}:
+    if behavior not in {"once", "toggle_loop", "hold_loop", "cycle"}:
         raise ValueError(f"Macro '{name}' has invalid behavior '{behavior}'")
-    actions_raw = raw.get("actions") or []
-    actions = [_parse_action(action) for action in actions_raw]
-    if not actions:
-        raise ValueError(f"Macro '{name}' must define at least one action")
+    actions_cycle: Optional[List[List[MacroAction]]] = None
+    actions: List[MacroAction] = []
+    if behavior == "cycle":
+        # Accept actions_cycle: [ [..], [..] ] or actions-1/actions-2 keys
+        if "actions_cycle" in raw:
+            raw_list = raw.get("actions_cycle") or []
+            actions_cycle = [[_parse_action(a) for a in group] for group in raw_list]
+        else:
+            grouped: List[tuple[int, List[MacroAction]]] = []
+            for key, value in raw.items():
+                if key.startswith("actions-"):
+                    try:
+                        idx = int(key.split("-", 1)[1])
+                    except ValueError:
+                        continue
+                    grouped.append((idx, [_parse_action(a) for a in (value or [])]))
+            grouped.sort(key=lambda t: t[0])
+            if grouped:
+                actions_cycle = [grp for _, grp in grouped]
+        if not actions_cycle:
+            raise ValueError(f"Macro '{name}' with behavior=cycle needs actions_cycle or actions-N")
+    else:
+        actions_raw = raw.get("actions") or []
+        actions = [_parse_action(action) for action in actions_raw]
+        if not actions:
+            raise ValueError(f"Macro '{name}' must define at least one action")
     return MacroDefinition(
         name=name,
         trigger=MacroTrigger(key=str(trigger_key), behavior=behavior),
         actions=actions,
+        actions_cycle=actions_cycle,
     )
 
 

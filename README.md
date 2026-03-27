@@ -50,6 +50,11 @@ macros:
         button: left          # left | right | middle
       - type: delay
         ms: 120
+  - name: cycle_example
+    trigger: { key: button13, behavior: cycle }
+    actions_cycle:
+      - [{ type: mouse_down, button: left }]
+      - [{ type: mouse_up, button: left }]
 ```
 
 ### Supported action types
@@ -64,6 +69,7 @@ macros:
 - `once`: run actions once on trigger press.
 - `toggle_loop`: press to start looping actions until pressed again.
 - `hold_loop`: loops while the trigger key is held (starts on press, stops on release).
+- `cycle`: each press advances to the next action group (configure with `actions_cycle: [[...],[...]]` or numbered keys `actions-1`, `actions-2`, ...).
 
 ## Extending
 - Add more action types (text input, scroll, key down/up) in `hotkeys/macro_engine.py`.

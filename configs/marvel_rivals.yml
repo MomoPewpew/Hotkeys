@@ -1,0 +1,13 @@
+name: Marvel Rivals
+match:
+  wm_class_contains:
+    - "steam_app_2767030"
+  title_contains:
+    - "Marvel Rivals"
+macros:
+  - name: toggle_click
+    trigger: { key: button13, behavior: cycle }
+    actions-1:
+      - { type: mouse_down, button: left }
+    actions-2:
+      - { type: mouse_up, button: left }
