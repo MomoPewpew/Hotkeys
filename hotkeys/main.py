@@ -9,7 +9,7 @@ from pathlib import Path
 from pynput import keyboard, mouse
 
 from .config_loader import load_profiles
-from .macro_engine import MacroEngine, key_to_name
+from .macro_engine import MacroEngine, canonical_key_name, key_to_name, normalize_combo
 from .window_manager import get_active_window
 from .evdev_listener import start_evdev_listener
 
@@ -106,18 +106,21 @@ def main() -> None:
     def on_press(key: keyboard.Key | keyboard.KeyCode) -> None:
         name = key_to_name(key)
         print(f"[input] key down: {name}")
-        pressed_keys.add(name)
+        pressed_keys.add(canonical_key_name(name))
         # combo check (for macro profile cycling)
         active = engine.active_profile
-        if active and active.macro_profile_cycle_hotkey and "+" in active.macro_profile_cycle_hotkey:
-            combo = "+".join(sorted(pressed_keys))
-            engine.handle_key_combo(combo)
+        if active and active.macro_profile_cycle_hotkey:
+            current_combo = normalize_combo("+".join(pressed_keys))
+            expected_combo = normalize_combo(active.macro_profile_cycle_hotkey)
+            print(f"[combo] current={current_combo} expected={expected_combo}")
+            if current_combo == expected_combo:
+                engine.handle_key_combo(current_combo)
         engine.handle_key_event(key, pressed=True)
 
     def on_release(key: keyboard.Key | keyboard.KeyCode) -> None:
         name = key_to_name(key)
         print(f"[input] key up: {name}")
-        pressed_keys.discard(name)
+        pressed_keys.discard(canonical_key_name(name))
         engine.handle_key_event(key, pressed=False)
 
     def on_click(x: int, y: int, button: mouse.Button, pressed: bool) -> None:

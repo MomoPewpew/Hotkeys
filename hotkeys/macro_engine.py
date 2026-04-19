@@ -23,16 +23,28 @@ SPECIAL_KEY_CANONICAL = {
     "win": "cmd",
     "super": "cmd",
     "numlock": "num_lock",
-    "numpad0": "num_pad0",
-    "numpad1": "num_pad1",
-    "numpad2": "num_pad2",
-    "numpad3": "num_pad3",
-    "numpad4": "num_pad4",
-    "numpad5": "num_pad5",
-    "numpad6": "num_pad6",
-    "numpad7": "num_pad7",
-    "numpad8": "num_pad8",
-    "numpad9": "num_pad9",
+    # On some layouts, pynput reports numpad digits as plain '1'..'9'.
+    # Canonicalize numpad digits to the digit itself so combos like alt+num_pad1 still match alt+1.
+    "numpad0": "0",
+    "numpad1": "1",
+    "numpad2": "2",
+    "numpad3": "3",
+    "numpad4": "4",
+    "numpad5": "5",
+    "numpad6": "6",
+    "numpad7": "7",
+    "numpad8": "8",
+    "numpad9": "9",
+    "num_pad0": "0",
+    "num_pad1": "1",
+    "num_pad2": "2",
+    "num_pad3": "3",
+    "num_pad4": "4",
+    "num_pad5": "5",
+    "num_pad6": "6",
+    "num_pad7": "7",
+    "num_pad8": "8",
+    "num_pad9": "9",
 }
 
 
@@ -73,6 +85,10 @@ def normalize_combo(combo: str) -> str:
         return ""
     # sort for stable matching (alt+num_pad0 == num_pad0+alt)
     return "+".join(sorted(parts))
+
+
+def canonical_key_name(name: str) -> str:
+    return _canonical_key_name(name)
 
 
 class MacroEngine:
