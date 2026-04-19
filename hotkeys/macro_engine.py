@@ -8,7 +8,7 @@ from pynput import keyboard, mouse
 
 from .config_loader import MacroAction, MacroDefinition, Profile
 from .window_manager import WindowInfo
-from .yaml_utils import yaml_dump
+from .yaml_utils import update_yaml_scalar_in_place
 
 
 SPECIAL_KEY_CANONICAL = {
@@ -255,8 +255,12 @@ class MacroEngine:
 
     def _persist_selected_macro_profile(self, profile: Profile) -> None:
         try:
-            profile._raw["selected_macro_profile"] = profile.selected_macro_profile
-            profile.source_path.write_text(yaml_dump(profile._raw), encoding="utf-8")
+            # Preserve the file's formatting by editing only the scalar line.
+            update_yaml_scalar_in_place(
+                path=profile.source_path,
+                key="selected_macro_profile",
+                value=profile.selected_macro_profile or "",
+            )
         except Exception as exc:  # pragma: no cover
             print(f"[macro-profile] persist failed: {exc}")
 
