@@ -1,0 +1,40 @@
+name: Diablo III
+match:
+  wm_class_contains:
+    - "steam_app_default"
+  title_contains:
+    - "Diablo III"
+macro_profile_cycle_hotkey: alt+num_pad1
+selected_macro_profile: tal
+macro_profile_order: [firebird, tal]
+macros_tal:
+  - name: tal_faceroll
+    trigger: { key: button13, behavior: toggle_loop }
+    actions:
+      - { type: mouse_down, button: left }
+      - { type: tap_key, key: a }
+      - { type: tap_key, key: w }
+      - { type: tap_key, key: d }
+      - { type: delay, ms: 25 }   # hold duration
+      - { type: mouse_up, button: left }
+      - { type: delay, ms: 25 }   # gap before next press
+macros_firebird:
+  - name: auto_click_left
+    trigger: { key: button13, behavior: toggle_loop }
+    actions:
+      - { type: mouse_down, button: left }
+      - { type: delay, ms: 25 }   # hold duration
+      - { type: mouse_up, button: left }
+      - { type: delay, ms: 25 }   # gap before next press
+  - name: spam_d
+    trigger: { key: button12, behavior: toggle_loop }
+    actions:
+      - { type: tap_key, key: d }
+      - { type: delay, ms: 50 }   # hold duration
+  #- name: auto_click_right
+  #  trigger: { key: button12, behavior: toggle_loop }
+  #  actions:
+  #    - { type: mouse_down, button: right }
+  #    - { type: delay, ms: 25 }   # hold duration
+  #    - { type: mouse_up, button: right }
+  #    - { type: delay, ms: 25 }   # gap before next press

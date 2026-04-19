@@ -8,6 +8,7 @@ from pynput import keyboard, mouse
 
 from .config_loader import MacroAction, MacroDefinition, Profile
 from .window_manager import WindowInfo
+from .yaml_utils import yaml_dump
 
 
 SPECIAL_KEY_CANONICAL = {
@@ -21,6 +22,17 @@ SPECIAL_KEY_CANONICAL = {
     "cmd": "cmd",
     "win": "cmd",
     "super": "cmd",
+    "numlock": "num_lock",
+    "numpad0": "num_pad0",
+    "numpad1": "num_pad1",
+    "numpad2": "num_pad2",
+    "numpad3": "num_pad3",
+    "numpad4": "num_pad4",
+    "numpad5": "num_pad5",
+    "numpad6": "num_pad6",
+    "numpad7": "num_pad7",
+    "numpad8": "num_pad8",
+    "numpad9": "num_pad9",
 }
 
 
@@ -53,6 +65,14 @@ def _matches_trigger_name(config_key: str, event_name: str) -> bool:
     if event_name.startswith("f") and config_name == event_name:
         return True
     return False
+
+
+def normalize_combo(combo: str) -> str:
+    parts = [_canonical_key_name(p.strip()) for p in combo.lower().split("+") if p.strip()]
+    if not parts:
+        return ""
+    # sort for stable matching (alt+num_pad0 == num_pad0+alt)
+    return "+".join(sorted(parts))
 
 
 class MacroEngine:
@@ -104,7 +124,7 @@ class MacroEngine:
         profile = self._active_profile
         if not profile:
             return
-        for macro in profile.macros:
+        for macro in profile.effective_macros():
             if _matches_trigger(macro.trigger.key, key):
                 if macro.trigger.behavior == "once" and pressed:
                     threading.Thread(target=self._run_actions, args=(macro, profile), daemon=True).start()
@@ -125,7 +145,7 @@ class MacroEngine:
         profile = self._active_profile
         if not profile:
             return
-        for macro in profile.macros:
+        for macro in profile.effective_macros():
             if _matches_trigger_name(macro.trigger.key, button_name):
                 if macro.trigger.behavior == "once" and pressed:
                     threading.Thread(target=self._run_actions, args=(macro, profile), daemon=True).start()
@@ -157,7 +177,7 @@ class MacroEngine:
             tokens.append("scroll_down")
         if not tokens:
             return
-        for macro in profile.macros:
+        for macro in profile.effective_macros():
             for t in tokens:
                 if _matches_trigger_name(macro.trigger.key, t):
                     if macro.trigger.behavior == "once":
@@ -177,7 +197,7 @@ class MacroEngine:
         profile = self._active_profile
         if not profile:
             return
-        for macro in profile.macros:
+        for macro in profile.effective_macros():
             if _matches_trigger_name(macro.trigger.key, name) or _matches_trigger_name(
                 macro.trigger.key, f"code_{code}"
             ):
@@ -192,6 +212,37 @@ class MacroEngine:
                         self._stop_loop(macro, profile)
                 elif macro.trigger.behavior == "cycle" and pressed:
                     self._run_cycle(macro, profile)
+
+    def handle_key_combo(self, combo: str) -> None:
+        """
+        Handle a chord/combo string like 'alt+num_pad0'. Intended for macro profile cycling.
+        """
+        profile = self._active_profile
+        if not profile or not profile.macro_profile_cycle_hotkey:
+            return
+        if normalize_combo(profile.macro_profile_cycle_hotkey) != normalize_combo(combo):
+            return
+        self.cycle_macro_profile(profile)
+
+    def cycle_macro_profile(self, profile: Profile) -> None:
+        if not profile.macro_profile_order:
+            return
+        current = profile.selected_macro_profile
+        if current not in profile.macro_profile_order:
+            next_name = profile.macro_profile_order[0]
+        else:
+            idx = profile.macro_profile_order.index(current)
+            next_name = profile.macro_profile_order[(idx + 1) % len(profile.macro_profile_order)]
+        profile.selected_macro_profile = next_name
+        self._persist_selected_macro_profile(profile)
+        print(f"[macro-profile] {profile.name}: {next_name}")
+
+    def _persist_selected_macro_profile(self, profile: Profile) -> None:
+        try:
+            profile._raw["selected_macro_profile"] = profile.selected_macro_profile
+            profile.source_path.write_text(yaml_dump(profile._raw), encoding="utf-8")
+        except Exception as exc:  # pragma: no cover
+            print(f"[macro-profile] persist failed: {exc}")
 
     def _loop_key(self, profile: Profile, macro: MacroDefinition) -> str:
         return f"{id(profile)}:{macro.name}"

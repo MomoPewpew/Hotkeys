@@ -8,6 +8,7 @@ Python daemon for window-aware gaming/utility macros on Linux Mint (X11). It wat
 - Logs: focused window name every 5s and every input event.
 - Macro triggers: key press based.
 - Actions: key taps, mouse clicks, delays; supports `once`, `toggle_loop`, and `hold_loop`.
+- In-game macro subprofiles: `macros_warrior`, `macros_wizard`, etc. Cycle with a hotkey and persist selection in YAML.
 
 ## Prereqs
 - X11 session (not Wayland).
@@ -40,6 +41,9 @@ name: Example Game
 match:
   wm_class_contains: ["steam_app"]
   title_contains: ["Example Game"]
+macro_profile_cycle_hotkey: alt+num_pad0
+selected_macro_profile: warrior
+macro_profile_order: [warrior, wizard]
 macros:
   - name: rapid_fire
     trigger:
@@ -55,6 +59,16 @@ macros:
     actions_cycle:
       - [{ type: mouse_down, button: left }]
       - [{ type: mouse_up, button: left }]
+macros_warrior:
+  - name: warrior_shout
+    trigger: { key: button12, behavior: once }
+    actions:
+      - { type: tap_key, key: g }
+macros_wizard:
+  - name: wizard_blink
+    trigger: { key: button12, behavior: once }
+    actions:
+      - { type: tap_key, key: r }
 ```
 
 ### Supported action types
@@ -70,6 +84,13 @@ macros:
 - `toggle_loop`: press to start looping actions until pressed again.
 - `hold_loop`: loops while the trigger key is held (starts on press, stops on release).
 - `cycle`: each press advances to the next action group (configure with `actions_cycle: [[...],[...]]` or numbered keys `actions-1`, `actions-2`, ...).
+
+### Macro subprofiles (within a game)
+- **Shared macros** go under `macros`.
+- **Subprofile macros** go under `macros_<name>` (e.g., `macros_warrior`, `macros_wizard`).
+- **Cycle hotkey**: set `macro_profile_cycle_hotkey` (supports combos like `alt+num_pad0`).
+- **Order**: optional `macro_profile_order: [warrior, wizard]`.
+- **Persistence**: `selected_macro_profile` is updated automatically when you cycle (written back into the same `.yml`).
 
 ## Extending
 - Add more action types (text input, scroll, key down/up) in `hotkeys/macro_engine.py`.

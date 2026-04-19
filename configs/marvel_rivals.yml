@@ -11,3 +11,9 @@ macros:
       - { type: mouse_down, button: left }
     actions-2:
       - { type: mouse_up, button: left }
+  - name: toggle_right
+    trigger: { key: button12, behavior: cycle }
+    actions-1:
+      - { type: mouse_down, button: right }
+    actions-2:
+      - { type: mouse_up, button: right }

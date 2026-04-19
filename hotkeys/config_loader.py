@@ -40,6 +40,18 @@ class Profile:
     name: str
     match: ProfileMatch
     macros: List[MacroDefinition]
+    macro_profiles: Dict[str, List[MacroDefinition]]
+    macro_profile_cycle_hotkey: Optional[str]
+    selected_macro_profile: Optional[str]
+    macro_profile_order: List[str]
+    source_path: Path
+    _raw: Dict[str, Any]
+
+    def effective_macros(self) -> List[MacroDefinition]:
+        macros = list(self.macros)
+        if self.selected_macro_profile:
+            macros.extend(self.macro_profiles.get(self.selected_macro_profile, []))
+        return macros
 
 
 def _parse_action(raw: Dict[str, Any]) -> MacroAction:
@@ -117,13 +129,36 @@ def _parse_macro(raw: Dict[str, Any]) -> MacroDefinition:
     )
 
 
-def _parse_profile(data: Dict[str, Any]) -> Profile:
+def _parse_profile(data: Dict[str, Any], source_path: Path) -> Profile:
     name = data.get("name") or "unnamed profile"
     match_raw = data.get("match") or {}
     wm_class_contains = [str(v) for v in match_raw.get("wm_class_contains", [])]
     title_contains = [str(v) for v in match_raw.get("title_contains", [])]
     macros_raw = data.get("macros") or []
     macros = [_parse_macro(m) for m in macros_raw]
+    macro_profiles: Dict[str, List[MacroDefinition]] = {}
+    for key, value in data.items():
+        if not key.startswith("macros_"):
+            continue
+        profile_name = key[len("macros_") :].strip()
+        if not profile_name:
+            continue
+        macro_profiles[profile_name] = [_parse_macro(m) for m in (value or [])]
+
+    macro_profile_order = [str(v) for v in (data.get("macro_profile_order") or [])]
+    if not macro_profile_order:
+        macro_profile_order = sorted(macro_profiles.keys())
+    else:
+        # keep only valid entries, append any missing
+        macro_profile_order = [p for p in macro_profile_order if p in macro_profiles]
+        for p in sorted(macro_profiles.keys()):
+            if p not in macro_profile_order:
+                macro_profile_order.append(p)
+
+    cycle_hotkey = data.get("macro_profile_cycle_hotkey")
+    selected = data.get("selected_macro_profile")
+    if selected not in macro_profiles:
+        selected = macro_profile_order[0] if macro_profile_order else None
     return Profile(
         name=name,
         match=ProfileMatch(
@@ -131,6 +166,12 @@ def _parse_profile(data: Dict[str, Any]) -> Profile:
             title_contains=title_contains,
         ),
         macros=macros,
+        macro_profiles=macro_profiles,
+        macro_profile_cycle_hotkey=str(cycle_hotkey) if cycle_hotkey else None,
+        selected_macro_profile=str(selected) if selected else None,
+        macro_profile_order=macro_profile_order,
+        source_path=source_path,
+        _raw=dict(data),
     )
 
 
@@ -139,6 +180,6 @@ def load_profiles(config_dir: Path) -> List[Profile]:
     for path in sorted(Path(config_dir).glob("*.yml")):
         with path.open("r", encoding="utf-8") as fh:
             data = yaml.safe_load(fh) or {}
-        profiles.append(_parse_profile(data))
+        profiles.append(_parse_profile(data, path))
     return profiles
 

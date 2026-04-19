@@ -4,6 +4,9 @@ match:
     - steam_app
   title_contains:
     - Example Game
+macro_profile_cycle_hotkey: alt+num_pad0
+selected_macro_profile: warrior
+macro_profile_order: [warrior, wizard]
 macros:
   - name: rapid_fire
     trigger:
@@ -21,4 +24,16 @@ macros:
     actions:
       - type: tap_key
         key: shift
+
+macros_warrior:
+  - name: warrior_shout
+    trigger: { key: button12, behavior: once }
+    actions:
+      - { type: tap_key, key: g }
+
+macros_wizard:
+  - name: wizard_blink
+    trigger: { key: button12, behavior: once }
+    actions:
+      - { type: tap_key, key: r }
 

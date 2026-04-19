@@ -89,6 +89,8 @@ def main() -> None:
     _start_focus_monitor(engine, stop_event)
     _start_config_watcher(engine, config_dir, stop_event)
 
+    pressed_keys: set[str] = set()
+
     # Start evdev listeners if provided
     evdev_paths = [p.strip() for p in args.evdev_devices.split(",") if p.strip()]
     evdev_threads = []
@@ -102,11 +104,20 @@ def main() -> None:
         )
 
     def on_press(key: keyboard.Key | keyboard.KeyCode) -> None:
-        print(f"[input] key down: {key_to_name(key)}")
+        name = key_to_name(key)
+        print(f"[input] key down: {name}")
+        pressed_keys.add(name)
+        # combo check (for macro profile cycling)
+        active = engine.active_profile
+        if active and active.macro_profile_cycle_hotkey and "+" in active.macro_profile_cycle_hotkey:
+            combo = "+".join(sorted(pressed_keys))
+            engine.handle_key_combo(combo)
         engine.handle_key_event(key, pressed=True)
 
     def on_release(key: keyboard.Key | keyboard.KeyCode) -> None:
-        print(f"[input] key up: {key_to_name(key)}")
+        name = key_to_name(key)
+        print(f"[input] key up: {name}")
+        pressed_keys.discard(name)
         engine.handle_key_event(key, pressed=False)
 
     def on_click(x: int, y: int, button: mouse.Button, pressed: bool) -> None:
