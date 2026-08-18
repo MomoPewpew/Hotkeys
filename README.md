@@ -84,6 +84,7 @@ macros_wizard:
 - `toggle_loop`: press to start looping actions until pressed again.
 - `hold_loop`: loops while the trigger key is held (starts on press, stops on release).
 - `cycle`: each press advances to the next action group (configure with `actions_cycle: [[...],[...]]` or numbered keys `actions-1`, `actions-2`, ...).
+- Alt-tab / unfocus immediately aborts running macros (including mid-delay); held keys/buttons are released.
 
 ### Macro subprofiles (within a game)
 - **Shared macros** go under `macros`.

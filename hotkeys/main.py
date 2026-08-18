@@ -24,7 +24,7 @@ def _start_focus_monitor(engine: MacroEngine, stop_event: threading.Event) -> No
                 print(f"[focus] {win.title} ({win.wm_class})")
                 last_print = now
             engine.update_active_window(win)
-            stop_event.wait(1.0)
+            stop_event.wait(0.1)
 
     threading.Thread(target=_run, daemon=True).start()
 

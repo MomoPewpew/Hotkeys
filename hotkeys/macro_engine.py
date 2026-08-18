@@ -97,6 +97,8 @@ class MacroEngine:
         self._active_profile: Optional[Profile] = None
         # map loop key -> (stop_event, expected_profile)
         self._running_loops: Dict[str, tuple[threading.Event, Profile]] = {}
+        # one-shot / in-progress action lists that should abort on unfocus or stop
+        self._in_flight: Dict[int, tuple[threading.Event, Profile]] = {}
         # cycle state per profile+macro
         self._cycle_state: Dict[str, int] = {}
         self._lock = threading.Lock()
@@ -110,20 +112,25 @@ class MacroEngine:
     def set_profiles(self, profiles: Iterable[Profile]) -> None:
         """Replace loaded profiles (used by live config reload)."""
         with self._lock:
+            old_profiles = list(self._profiles)
             self._profiles = list(profiles)
             self._cycle_state.clear()
+        for profile in old_profiles:
+            self._abort_profile(profile)
 
     def update_active_window(self, window: Optional[WindowInfo]) -> None:
-        if not window:
-            return
-        match = self._find_matching_profile(window)
+        match = self._find_matching_profile(window) if window else None
+        old: Optional[Profile] = None
         with self._lock:
             if match != self._active_profile:
+                old = self._active_profile
                 self._active_profile = match
                 if match:
                     print(f"[profile] Active profile: {match.name}")
                 else:
                     print("[profile] No matching profile")
+        if old:
+            self._abort_profile(old)
 
     def _find_matching_profile(self, window: WindowInfo) -> Optional[Profile]:
         title = window.title.lower()
@@ -276,6 +283,22 @@ class MacroEngine:
         else:
             self._start_loop_if_needed(macro, profile)
 
+    def _abort_profile(self, profile: Profile) -> None:
+        """Immediately stop loops and in-flight action lists for this game profile."""
+        to_stop: list[tuple[str, threading.Event]] = []
+        with self._lock:
+            for key, (stop_event, running_profile) in list(self._running_loops.items()):
+                if running_profile is profile or running_profile.name == profile.name:
+                    to_stop.append((key, stop_event))
+            for stop_event, running_profile in list(self._in_flight.values()):
+                if running_profile is profile or running_profile.name == profile.name:
+                    stop_event.set()
+        for key, stop_event in to_stop:
+            with self._lock:
+                self._running_loops.pop(key, None)
+            stop_event.set()
+            print(f"[macro] stop loop (unfocus): {key.split(':', 1)[-1]}")
+
     def _start_loop_if_needed(self, macro: MacroDefinition, profile: Profile) -> None:
         key = self._loop_key(profile, macro)
         with self._lock:
@@ -299,12 +322,34 @@ class MacroEngine:
         while not stop_event.is_set():
             if not self._is_profile_active(profile):
                 break
-            self._run_actions(macro, profile)
-        # ensure brief pause to avoid tight loop after stop
+            self._run_action_list(macro, profile, macro.actions, stop_event)
         time.sleep(0.01)
 
     def _is_profile_active(self, expected: Profile) -> bool:
         return self._active_profile is expected
+
+    def _should_abort(self, expected_profile: Profile, stop_event: Optional[threading.Event]) -> bool:
+        if stop_event is not None and stop_event.is_set():
+            return True
+        return not self._is_profile_active(expected_profile)
+
+    def _wait(self, seconds: float, expected_profile: Profile, stop_event: Optional[threading.Event]) -> bool:
+        """Sleep up to `seconds`. Returns False if aborted."""
+        if seconds <= 0:
+            return not self._should_abort(expected_profile, stop_event)
+        deadline = time.monotonic() + seconds
+        while True:
+            if self._should_abort(expected_profile, stop_event):
+                return False
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return not self._should_abort(expected_profile, stop_event)
+            slice_s = min(0.02, remaining)
+            if stop_event is not None:
+                if stop_event.wait(slice_s):
+                    return False
+            else:
+                time.sleep(slice_s)
 
     def _run_cycle(self, macro: MacroDefinition, profile: Profile) -> None:
         if not macro.actions_cycle:
@@ -315,38 +360,73 @@ class MacroEngine:
             next_idx = (idx + 1) % len(macro.actions_cycle)
             self._cycle_state[key] = next_idx
         actions = macro.actions_cycle[idx]
-        self._run_action_list(macro, profile, actions)
+        self._run_actions(macro, profile, actions)
 
-    def _run_actions(self, macro: MacroDefinition, expected_profile: Profile) -> None:
-        self._run_action_list(macro, expected_profile, macro.actions)
+    def _run_actions(
+        self,
+        macro: MacroDefinition,
+        expected_profile: Profile,
+        actions: Optional[list[MacroAction]] = None,
+    ) -> None:
+        stop_event = threading.Event()
+        token = id(stop_event)
+        with self._lock:
+            self._in_flight[token] = (stop_event, expected_profile)
+        try:
+            self._run_action_list(macro, expected_profile, actions or macro.actions, stop_event)
+        finally:
+            with self._lock:
+                self._in_flight.pop(token, None)
 
-    def _run_action_list(self, macro: MacroDefinition, expected_profile: Profile, actions: list[MacroAction]) -> None:
-        if not self._is_profile_active(expected_profile):
+    def _run_action_list(
+        self,
+        macro: MacroDefinition,
+        expected_profile: Profile,
+        actions: list[MacroAction],
+        stop_event: Optional[threading.Event] = None,
+    ) -> None:
+        if self._should_abort(expected_profile, stop_event):
             return
         print(f"[macro] run: {macro.name}")
+        held_keys: set[str] = set()
+        held_buttons: set[str] = set()
+        aborted = False
         for action in actions:
-            if not self._is_profile_active(expected_profile):
-                return
+            if self._should_abort(expected_profile, stop_event):
+                aborted = True
+                break
             if action.type == "delay":
-                time.sleep((action.delay_ms or 0) / 1000.0)
+                if not self._wait((action.delay_ms or 0) / 1000.0, expected_profile, stop_event):
+                    aborted = True
+                    break
             elif action.type == "tap_key":
                 if action.key:
                     self._tap_key(action.key)
             elif action.type == "key_down":
                 if action.key:
                     self._key_down(action.key)
+                    held_keys.add(action.key)
             elif action.type == "key_up":
                 if action.key:
                     self._key_up(action.key)
+                    held_keys.discard(action.key)
             elif action.type == "tap_mouse":
                 if action.button:
                     self._tap_mouse(action.button)
             elif action.type == "mouse_down":
                 if action.button:
                     self._mouse_down(action.button)
+                    held_buttons.add(action.button)
             elif action.type == "mouse_up":
                 if action.button:
                     self._mouse_up(action.button)
+                    held_buttons.discard(action.button)
+        if aborted:
+            print(f"[macro] abort: {macro.name}")
+            for key_name in list(held_keys):
+                self._key_up(key_name)
+            for button_name in list(held_buttons):
+                self._mouse_up(button_name)
 
     def _tap_key(self, key_name: str) -> None:
         key_obj = _keyname_to_keycode(key_name)
