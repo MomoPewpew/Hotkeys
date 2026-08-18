@@ -1,0 +1,17 @@
+name: Tower Unite
+match:
+  wm_class_contains:
+    - "steam_app_394690"
+  title_contains:
+    - "Tower Unite"
+macro_profile_cycle_hotkey: alt+num_pad1
+selected_macro_profile: stackit
+macro_profile_order: [stackit]
+macros_stackit:
+  - name: spam_left
+    trigger: { key: button13, behavior: toggle_loop }
+    actions:
+    - { type: mouse_down, button: left }
+    - { type: delay, ms: 385 }
+    - { type: mouse_up, button: left }
+    - { type: delay, ms: 385 }

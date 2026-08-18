@@ -1,0 +1,29 @@
+name: Sledding Game
+match:
+  wm_class_contains:
+    - "steam_app_3438850"
+  title_contains:
+    - "Sledding Game"
+macro_profile_cycle_hotkey: alt+num_pad1
+selected_macro_profile: farm
+macro_profile_order: [farm]
+macros_farm:
+  - name: farm
+    trigger: { key: button13, behavior: toggle_loop }
+    actions:
+    - { type: key_down, key: w }
+    - { type: delay, ms: 1000 }
+    - { type: key_down, key: shift }
+    - { type: delay, ms: 100 }
+    - { type: key_up, key: shift }
+    - { type: delay, ms: 25000 }
+    - { type: key_up, key: w }
+    - { type: delay, ms: 1000 }
+    - { type: key_down, key: shift }
+    - { type: delay, ms: 100 }
+    - { type: key_up, key: shift }
+    - { type: delay, ms: 1000 }
+    - { type: key_down, key: 2 }
+    - { type: delay, ms: 1500 }
+    - { type: key_up, key: 2 }
+    - { type: delay, ms: 1000 }

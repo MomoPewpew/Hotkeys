@@ -4,16 +4,38 @@ match:
     - "steam_app_2767030"
   title_contains:
     - "Marvel Rivals"
-macros:
+macro_profile_cycle_hotkey: alt+num_pad1
+selected_macro_profile: spam
+macro_profile_order: [cloak, spam, dinosaur]
+macros_cloak:
   - name: toggle_click
     trigger: { key: button13, behavior: cycle }
     actions-1:
       - { type: mouse_down, button: left }
     actions-2:
       - { type: mouse_up, button: left }
-  - name: toggle_right
-    trigger: { key: button12, behavior: cycle }
-    actions-1:
-      - { type: mouse_down, button: right }
-    actions-2:
-      - { type: mouse_up, button: right }
+macros_spam:
+  - name: spam_left
+    trigger: { key: button13, behavior: toggle_loop }
+    actions:
+    - { type: mouse_down, button: left }
+    - { type: delay, ms: 20 }
+    - { type: mouse_up, button: left }
+    - { type: delay, ms: 20 }
+  - name: spam_right
+    trigger: { key: button12, behavior: toggle_loop }
+    actions:
+    - { type: mouse_down, button: right }
+    - { type: delay, ms: 20 }
+    - { type: mouse_up, button: right }
+    - { type: delay, ms: 20 }
+macros_dinosaur:
+  - name: spam_left
+    trigger: { key: button13, behavior: toggle_loop }
+    actions:
+    - { type: mouse_down, button: left }
+    - { type: key_down, key: v }
+    - { type: delay, ms: 20 }
+    - { type: mouse_up, button: left }
+    - { type: key_up, key: v }
+    - { type: delay, ms: 20 }

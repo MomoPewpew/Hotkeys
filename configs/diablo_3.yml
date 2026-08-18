@@ -12,21 +12,21 @@ macros_tal:
     trigger: { key: button13, behavior: toggle_loop }
     actions:
     - { type: mouse_down, button: left }
-    - { type: delay, ms: 10 }
+    - { type: delay, ms: 20 }
     - { type: mouse_up, button: left }
-    - { type: delay, ms: 10 }
+    - { type: delay, ms: 20 }
     - { type: key_down, key: a }
-    - { type: delay, ms: 10 }
+    - { type: delay, ms: 20 }
     - { type: key_up, key: a }
-    - { type: delay, ms: 10 }
+    - { type: delay, ms: 20 }
     - { type: key_down, key: w }
-    - { type: delay, ms: 10 }
+    - { type: delay, ms: 20 }
     - { type: key_up, key: w }
-    - { type: delay, ms: 10 }
-    - { type: key_down, key: d }
-    - { type: delay, ms: 10 }
-    - { type: key_up, key: d }
-    - { type: delay, ms: 10 }
+    - { type: delay, ms: 20 }
+    #- { type: key_down, key: d }
+    #- { type: delay, ms: 20 }
+    #- { type: key_up, key: d }
+    #- { type: delay, ms: 20 }
 macros_firebird:
   - name: toggle_right
     trigger: { key: button13, behavior: cycle }
@@ -35,7 +35,8 @@ macros_firebird:
     actions-2:
       - { type: mouse_up, button: right }
   - name: spam_d
-    trigger: { key: button12, behavior: toggle_loop }
+    trigger: { key: button13, behavior: toggle_loop }
     actions:
     - { type: tap_key, key: d }
+    - { type: tap_key, key: q }
     - { type: delay, ms: 50 }
